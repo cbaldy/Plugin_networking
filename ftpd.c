@@ -794,6 +794,17 @@ FLASHMEM static void cmd_retr (char *arg, struct tcp_pcb *pcb, ftpd_msgstate_t *
         if(ok) {
             fsm->datafs->vfs_file = vfs_file;
             fsm->state = FTPD_RETR;
+            // Passive mode: the client usually opens the data connection before
+            // sending RETR, so ftpd_dataconnected() has already run and nothing
+            // else would start the transfer.
+            if(fsm->datafs->connected) {
+#if FTP_TXPOLL
+                poll.fsd = fsm->datafs;
+                poll.pcb = fsm->datapcb;
+#else
+                send_file(fsm->datafs, fsm->datapcb);
+#endif
+            }
         }
     }
 }
