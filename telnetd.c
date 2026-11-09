@@ -452,7 +452,13 @@ FLASHMEM static err_t telnet_accept (void *arg, struct tcp_pcb *pcb, err_t err)
     tcp_sent(pcb, telnet_sent);
     tcp_arg(pcb, &streamSession);
 #if LWIP_TCP_KEEPALIVE
-//??    pcb->keep_idle = pcb->keep_intvl = 3000;
+    // Only one client is accepted, so a client that vanished without closing
+    // (power cut, reset, Wi-Fi drop) would block everyone else until lwIP's
+    // default 2 h keepalive idle ran out. Probe after 10 s of silence and give
+    // up after 3 unanswered probes 2 s apart: the slot frees in ~16 s.
+    pcb->keep_idle = 10000;
+    pcb->keep_intvl = 2000;
+    pcb->keep_cnt = 3;
     ip_set_option(pcb, SOF_KEEPALIVE);
 #endif
 
